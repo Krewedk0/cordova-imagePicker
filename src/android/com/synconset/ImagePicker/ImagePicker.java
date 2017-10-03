@@ -5,6 +5,8 @@ package com.synconset;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.PermissionHelper;
+import org.apache.cordova.PluginResult;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -12,9 +14,13 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.util.Log;
+
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 
 public class ImagePicker extends CordovaPlugin {
 	public static String TAG = "ImagePicker";
@@ -26,6 +32,12 @@ public class ImagePicker extends CordovaPlugin {
 		 this.callbackContext = callbackContext;
 		 this.params = args.getJSONObject(0);
 		if (action.equals("getPictures")) {
+
+			if(!PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                PermissionHelper.requestPermission(this, 1, Manifest.permission.READ_EXTERNAL_STORAGE);
+                return true;
+            }
+
 			Intent intent = new Intent(cordova.getActivity(), MultiImageChooserActivity.class);
 			int max = 20;
 			int desiredWidth = 0;
@@ -69,4 +81,42 @@ public class ImagePicker extends CordovaPlugin {
 			this.callbackContext.error("No images selected");
 		}
 	}
+
+	public void openIntent(){
+		Intent intent = new Intent(cordova.getActivity(), MultiImageChooserActivity.class);
+		int max = 20;
+		int desiredWidth = 0;
+		int desiredHeight = 0;
+		int quality = 100;
+		// if (this.params.has("maximumImagesCount")) {
+		// 	max = this.params.getInt("maximumImagesCount");
+		// }
+		// if (this.params.has("width")) {
+		// 	desiredWidth = this.params.getInt("width");
+		// }
+		// if (this.params.has("height")) {
+		// 	desiredHeight = this.params.getInt("height");
+		// }
+		// if (this.params.has("quality")) {
+		// 	quality = this.params.getInt("quality");
+		// }
+		intent.putExtra("MAX_IMAGES", max);
+		intent.putExtra("WIDTH", desiredWidth);
+		intent.putExtra("HEIGHT", desiredHeight);
+		intent.putExtra("QUALITY", quality);
+		if (this.cordova != null) {
+			this.cordova.startActivityForResult((CordovaPlugin) this, intent, 0);
+		}
+	}
+
+	public void onRequestPermissionResult(int requestCode, String[] permissions,
+                                          int[] grantResults) throws JSONException {
+        for (int r : grantResults) {
+            if (r == PackageManager.PERMISSION_DENIED) {
+                this.callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, 20));
+                return;
+            }
+        }
+        this.openIntent();
+    }
 }
